@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 Camera Control</title>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        #status {
+            margin-top: 20px;
+        }
+        .btn {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .status {
+            font-weight: bold;
+        }
+        #camera-view {
+            margin-top: 20px;
+        }
+        .slider-container {
+            margin: 20px 0;
+        }
+        .slider {
+            width: 300px;
+        }
+    </style>
+</head>
+<body>
+    <h1>ESP32 Camera Control</h1>
+    
+    <!-- Buttons to control camera -->
+    <button id="start" class="btn">Start Camera</button>
+    <button id="stop" class="btn">Stop Camera</button>
+    <button id="increase_resolution" class="btn">Increase Resolution</button>
+    <button id="decrease_resolution" class="btn">Decrease Resolution</button>
+
+    <!-- Slider for servo control -->
+    <div class="slider-container">
+        <label for="servoControl">Servo Angle: <span id="servoValue">90</span>°</label><br>
+        <input id="servoControl" type="range" min="0" max="180" value="90" class="slider">
+    </div>
+
+    <!-- Status messages -->
+    <div id="status">
+        <p>Current MQTT connection status: <span id="mqttStatus" class="status">Not connected</span></p>
+        <p>Last received message: <span id="lastMessage" class="status">None</span></p>
+    </div>
+
+    <!-- Camera View -->
+    <div id="camera-view">
+        <img id="cameraImage" src="/uploads/image.jpg" alt="Camera View" width="640" height="480">
+    </div>
+
+    <script>
+        // MQTT broker and topic details
+        const mqttServer = 'ws://test.mosquitto.org:8081'; // Use WebSockets
+        const mqttTopic = 'YOUR MQTT TOPIC';  // <---EDIT HERE
+
+        let client = mqtt.connect(mqttServer);
+
+        // Update the MQTT connection status
+        client.on('connect', function () {
+            document.getElementById('mqttStatus').innerText = 'Connected';
+            console.log('Connected to MQTT broker');
+
+            // Subscribe to the topic
+            client.subscribe(mqttTopic, function (err) {
+                if (!err) {
+                    console.log('Subscribed to topic:', mqttTopic);
+                } else {
+                    console.error('Error subscribing to topic:', err);
+                }
+            });
+        });
+
+        client.on('close', function () {
+            document.getElementById('mqttStatus').innerText = 'Disconnected';
+            console.log('Disconnected from MQTT broker');
+        });
+
+        client.on('error', function (err) {
+            document.getElementById('mqttStatus').innerText = 'Error';
+            console.log('Error with MQTT connection:', err);
+        });
+
+        // Handle received messages and display them
+        client.on('message', function (topic, message) {
+            console.log('Message received:', message.toString());
+            document.getElementById('lastMessage').innerText = message.toString();
+        });
+
+        // Button handlers to send commands via MQTT
+        document.getElementById('start').onclick = function () {
+            const msg = 'start';
+            client.publish(mqttTopic, msg);
+            console.log('Message sent:', msg);
+        };
+
+        document.getElementById('stop').onclick = function () {
+            const msg = 'stop';
+            client.publish(mqttTopic, msg);
+            console.log('Message sent:', msg);
+        };
+
+        document.getElementById('increase_resolution').onclick = function () {
+            const msg = 'increase_resolution';
+            client.publish(mqttTopic, msg);
+            console.log('Message sent:', msg);
+        };
+
+        document.getElementById('decrease_resolution').onclick = function () {
+            const msg = 'decrease_resolution';
+            client.publish(mqttTopic, msg);
+            console.log('Message sent:', msg);
+        };
+
+        // Slider control for servo
+        const slider = document.getElementById('servoControl');
+        const servoValueDisplay = document.getElementById('servoValue');
+
+        slider.addEventListener('input', function () {
+            const angle = slider.value;
+            servoValueDisplay.innerText = angle;
+        });
+
+        slider.addEventListener('change', function () {
+            const angle = slider.value;
+            client.publish(mqttTopic, angle);
+            console.log('Servo angle sent:', angle);
+        });
+
+        // Function to refresh the camera image
+        function refreshCameraImage() {
+            const img = document.getElementById('cameraImage');
+            img.src = `/uploads/image.jpg?t=${new Date().getTime()}`; // Prevent caching by appending timestamp
+        }
+
+        // Refresh the image every 300ms
+        setInterval(refreshCameraImage, 300);
+    </script>
+</body>
+</html>
